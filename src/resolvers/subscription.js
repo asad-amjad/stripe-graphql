@@ -77,7 +77,6 @@ const changeSubscriptionPlan = async (args) => {
           },
         ],
         proration_behavior: "always_invoice",
-        // description: description,
       });
       return {
         id: session?.id,
