@@ -77,7 +77,6 @@ const changeSubscriptionPlan = async (args) => {
           },
         ],
         proration_behavior: "always_invoice",
-
       });
       return {
         id: session?.id,
@@ -122,6 +121,30 @@ const getMySubscriptions = async (customerId) => {
   }
 };
 
+const getPriceDetails = async (priceId) => {
+  try {
+    const price = await stripe.prices.retrieve(priceId);
+    
+    // Fetch additional product details if needed
+    const product = await stripe.products.retrieve(price.product);
+// console.log(product)
+    return {
+      id: price.id,
+      active: price.active,
+      currency: price.currency,
+      unit_amount: price.unit_amount,
+      recurring: price.recurring,
+      product_name: product.name,
+      product_description: product.description,
+      product_metadata: product.metadata,
+      metadata: price.metadata,
+    };
+  } catch (error) {
+    throw new Error(`Error fetching price details: ${error.message}`);
+  }
+};
+
+
 const cancelSubscriptionPlan = async (subscriptionId) => {
   try {
     // Set the subscription to cancel at the end of the current billing cycle
@@ -146,9 +169,48 @@ const cancelSubscriptionPlan = async (subscriptionId) => {
   }
 };
 
+// Function to preview proration
+const previewProration = async (subscriptionId, newPriceId) => {
+  try {
+    // Retrieve the current subscription
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    // Preview the upcoming invoice with proration
+    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+      customer: subscription.customer,
+      subscription: subscriptionId,
+      subscription_items: [
+        {
+          id: subscription.items.data[0].id,
+          price: newPriceId,
+        },
+      ],
+    });
+
+    // Extract relevant proration data
+    const prorationAmount = upcomingInvoice.total;
+    const invoiceItems = upcomingInvoice.lines.data.map(
+      (item) => item.description
+    );
+
+    return {
+      prorationAmount,
+      invoiceItems,
+      upcomingInvoice: JSON.stringify(upcomingInvoice), // or return the needed part
+    };
+    // console.log("Upcoming invoice with proration:", upcomingInvoice);
+    // return {data:""}; // Return the proration details if needed
+  } catch (error) {
+    console.error("Error previewing proration:", error);
+    throw error; // Re-throw the error if needed
+  }
+};
+
 module.exports = {
   createSubscriptionCheckoutSession,
   getMySubscriptions,
   changeSubscriptionPlan,
   cancelSubscriptionPlan,
+  previewProration,
+  getPriceDetails,
 };
