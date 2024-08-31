@@ -97,7 +97,7 @@ const getMySubscriptions = async (customerId) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
     });
-
+console.log(subscriptions)
     const subscriptionDetails = await Promise.all(
       subscriptions.data.map(async (subscription) => {
         const items = await stripe.subscriptionItems.list({
@@ -111,6 +111,9 @@ const getMySubscriptions = async (customerId) => {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           plan_price_id: subscription.plan?.id,
+          default_payment_method:subscription?.default_payment_method,
+          cancel_at: subscription?.cancel_at,
+
         };
       })
     );
@@ -206,6 +209,28 @@ const previewProration = async (subscriptionId, newPriceId) => {
   }
 };
 
+
+const getTransactionHistory = async (customerId) => {
+  try {
+    const transactions = await stripe.paymentIntents.list({
+      customer: customerId,
+    });
+    // Map the transactions to the required format
+    return transactions.data.map((transaction) => ({
+      id: transaction.id,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      status: transaction.status,
+      // created: new Date(transaction.created * 1000).toISOString(), // Convert timestamp to ISO string
+      created: transaction.created, // Convert timestamp to ISO string
+      description: transaction.description, // Convert timestamp to ISO string
+    }));
+  } catch (error) {
+    throw new Error(`Error fetching transaction history: ${error.message}`);
+  }
+};
+
+
 module.exports = {
   createSubscriptionCheckoutSession,
   getMySubscriptions,
@@ -213,4 +238,5 @@ module.exports = {
   cancelSubscriptionPlan,
   previewProration,
   getPriceDetails,
+  getTransactionHistory
 };
