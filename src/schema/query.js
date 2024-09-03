@@ -10,11 +10,13 @@ const {
   previewProration,
   getPriceDetails,
   getTransactionHistory,
+  getMyPaymentMethods,
 } = require("../resolvers/subscription");
 
 const CustomerType = require("../types/customer-type");
 const SubscriptionType = require("../types/subscription-type");
 const TransactionType = require("../types/transaction-type");
+const PaymentMethodType = require("../types/PaymentMethodType");
 // const { TransactionType } = require("../types/transaction-type");
 // Add a custom type to return proration data
 const ProrationType = new GraphQLObjectType({
@@ -93,6 +95,21 @@ const RootQuery = new GraphQLObjectType({
         return getTransactionHistory(args.customerId);
       },
     },
+
+    getPaymentMethods: {
+      type: new GraphQLObjectType({
+        name: "PaymentMethodsResponse",
+        fields: {
+          paymentMethods: { type: new GraphQLList(PaymentMethodType) },
+          defaultPaymentMethod: { type: PaymentMethodType },
+        },
+      }),
+      args: { customerId: { type: GraphQLString } },
+      resolve(parent, args) {
+        return getMyPaymentMethods(args.customerId);
+      },
+    },
+    
   },
 });
 

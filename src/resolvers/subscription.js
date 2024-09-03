@@ -97,7 +97,6 @@ const getMySubscriptions = async (customerId) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
     });
-console.log(subscriptions)
     const subscriptionDetails = await Promise.all(
       subscriptions.data.map(async (subscription) => {
         const items = await stripe.subscriptionItems.list({
@@ -231,6 +230,43 @@ const getTransactionHistory = async (customerId) => {
 };
 
 
+const getMyPaymentMethods = async (customerId) => {
+  try {
+    // Fetch the payment methods associated with the customer
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: "card", // or "all" for all types of payment methods
+    });
+
+    // Fetch the customer's details to check the default payment method
+    const customer = await stripe.customers.retrieve(customerId);
+    const defaultPaymentMethodId = customer.invoice_settings.default_payment_method;
+
+    // Map the payment methods to include is_default flag
+    const paymentMethodsWithDefault = paymentMethods.data.map((paymentMethod) => ({
+      id: paymentMethod.id,
+      type: paymentMethod.type,
+      card: paymentMethod.card,
+      billing_details: paymentMethod.billing_details,
+      created: paymentMethod.created,
+      is_default: paymentMethod.id === defaultPaymentMethodId, // Check if this is the default payment method
+    }));
+
+    // Get default payment method details if it exists
+    let defaultPaymentMethod = null;
+    if (defaultPaymentMethodId) {
+      defaultPaymentMethod = paymentMethodsWithDefault.find(pm => pm.id === defaultPaymentMethodId);
+    }
+
+    return {
+      paymentMethods: paymentMethodsWithDefault,
+      defaultPaymentMethod,
+    };
+  } catch (error) {
+    throw new Error(`Error fetching payment methods: ${error.message}`);
+  }
+};
+
 module.exports = {
   createSubscriptionCheckoutSession,
   getMySubscriptions,
@@ -238,5 +274,6 @@ module.exports = {
   cancelSubscriptionPlan,
   previewProration,
   getPriceDetails,
-  getTransactionHistory
+  getTransactionHistory,
+  getMyPaymentMethods
 };
